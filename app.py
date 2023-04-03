@@ -212,7 +212,6 @@ def stop_following(follow_id):
 
 @app.route('/users/profile', methods=["GET", "POST"])
 def profile():
-    """Update profile for current user."""
     """Updates the current user's profile"""
 
     if not g.user:
