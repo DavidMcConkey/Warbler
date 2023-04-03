@@ -1,6 +1,6 @@
 import os
 
-from flask import Flask, render_template, request, flash, redirect, session, g
+from flask import Flask, render_template, request, flash, redirect, session, g, abort
 from flask_debugtoolbar import DebugToolbarExtension
 from sqlalchemy.exc import IntegrityError
 
@@ -154,7 +154,8 @@ def users_show(user_id):
                 .order_by(Message.timestamp.desc())
                 .limit(100)
                 .all())
-    return render_template('users/show.html', user=user, messages=messages)
+    likes = [message.id for message in user.likes]
+    return render_template('users/show.html', user=user, messages=messages, likes = likes)
 
 
 @app.route('/users/<int:user_id>/following')
@@ -167,6 +168,37 @@ def show_following(user_id):
 
     user = User.query.get_or_404(user_id)
     return render_template('users/following.html', user=user)
+
+######### Likes routes #########
+
+@app.route('/users/<int:user_id>/likes', methods=["GET"])
+def show_likes(user_id):
+    """Displays likes for logged in user"""
+    if not g.user:
+        flash("Unauthorized.", 'danger')
+        return redirect('/')
+    user = User.query.get_or_404(user_id)
+    return render_template('users/likes.html', user = user, likes = user.likes)
+
+@app.route('/messages/<int:message_id>/like',methods=["POST"])
+def add_like(message_id):
+    """Toggle liked message for current User"""
+    if not g.user:
+        flash('Unauthorized.', 'danger')
+        return redirect('/')
+    liked_msg = Message.query.get_or_404(message_id)
+    if liked_msg.user_id == g.user.id:
+        return abort(403)
+    user_likes = g.user.likes
+
+    if liked_msg in user_likes:
+        g.user.likes = [like for like in user_likes if like != liked_msg]
+    else:
+        g.user.likes.append(liked_msg)
+    db.session.commit()
+    return redirect('/')
+
+
 
 
 @app.route('/users/<int:user_id>/followers')
@@ -320,12 +352,18 @@ def homepage():
                     .order_by(Message.timestamp.desc())
                     .limit(100)
                     .all())
+        
+        liked_msg_ids = [msg.id for msg in g.user.likes]
 
-        return render_template('home.html', messages=messages)
+        return render_template('home.html', messages=messages, likes = liked_msg_ids)
 
     else:
         return render_template('home-anon.html')
 
+@app.errorhandler(404)
+def page_not_found(evt):
+    """Handles page not found error"""
+    return render_template('404.html'), 404
 
 ##############################################################################
 # Turn off all caching in Flask
