@@ -68,7 +68,7 @@ def signup():
 
     form = UserAddForm()
 
-    if form.validate_on_submit():
+    if form.validate():
         try:
             user = User.signup(
                 username=form.username.data,
@@ -96,7 +96,7 @@ def login():
 
     form = LoginForm()
 
-    if form.validate_on_submit():
+    if form.validate():
         user = User.authenticate(form.username.data,
                                  form.password.data)
 
@@ -252,7 +252,7 @@ def profile():
     user = g.user
     form = UserEditForm(obj=user)
 
-    if form.validate_on_submit():
+    if form.validate():
         if User.authenticate(user.username,form.password.data):
             user.username = form.username.data
             user.email = form.email.data
@@ -298,7 +298,7 @@ def messages_add():
 
     form = MessageForm()
 
-    if form.validate_on_submit():
+    if form.validate():
         msg = Message(text=form.text.data)
         g.user.messages.append(msg)
         db.session.commit()
